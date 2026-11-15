@@ -153,8 +153,8 @@ details ol{padding-left:20px;margin:8px 0}
 .who-btns{display:grid;gap:10px}
 .who-btns .btn{text-align:left;display:flex;align-items:center;gap:12px}
 
-#toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 10px);transform:translate(-50%,-140%);background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:14px;font-size:15px;max-width:min(92vw,520px);z-index:30;transition:transform .3s;box-shadow:0 8px 24px rgba(10,20,40,.3)}
-#toast.show{transform:translate(-50%,0)}
+#toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 10px);transform:translate(-50%,-16px);background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:14px;font-size:15px;max-width:min(92vw,520px);z-index:30;opacity:0;visibility:hidden;pointer-events:none;transition:transform .3s,opacity .3s,visibility 0s .3s;box-shadow:0 8px 24px rgba(10,20,40,.3)}
+#toast.show{transform:translate(-50%,0);opacity:1;visibility:visible;transition:transform .3s,opacity .3s,visibility 0s}
 @media (prefers-reduced-motion: reduce){
   .beam,#sheet-root .sheet,#sheet-root .backdrop,#toast{transition:none}
 }
