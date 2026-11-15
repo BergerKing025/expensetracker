@@ -113,7 +113,10 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--a);outline-offs
 .money span{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted)}
 .money input{padding-left:30px}
 .seg{display:flex;gap:6px}
-.seg button{flex:1;padding:12px 6px;border-radius:12px;border:1.5px solid var(--line-strong);background:transparent;font-weight:600;cursor:pointer;font-size:16px}
+[hidden]{display:none!important}
+.seg button{flex:1 1 0;min-width:0;padding:12px 4px;border-radius:12px;border:1.5px solid var(--line-strong);background:transparent;font-weight:600;cursor:pointer;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.share-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
+.seg.unit button{flex:none;padding:12px 18px}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .preview{background:var(--bg);border-radius:12px;padding:12px 14px;font-size:15px;color:var(--muted);margin:2px 0 16px;min-height:46px}
 .preview b{color:var(--ink)}
@@ -166,6 +169,13 @@ const shortDate = s => parseDate(s).toLocaleDateString(LOCALE, { month: 'short',
 const monthLabel = s => parseDate(s).toLocaleDateString(LOCALE, { month: 'long', year: 'numeric' });
 const parseAmount = s => { const n = parseFloat(String(s).replace(/[^0-9.]/g, '')); return isFinite(n) ? Math.round(n * 100) : 0; };
 
+// Cents the other person owes for a custom split, from either a dollar amount or a percentage of the total.
+function customOwed(f, total) {
+  const v = parseFloat(String(f.share).replace(/[^0-9.]/g, ''));
+  if (!isFinite(v)) return 0;
+  return f.unit === '%' ? Math.round(total * v / 100) : Math.round(v * 100);
+}
+
 /* ---------- state ---------- */
 let cfg = load('evenly.cfg', null);                       // { repo, path, branch, token, me }
 let data = load('evenly.data', { people: [], peopleAt: 0, items: [] });
@@ -185,6 +195,7 @@ function effect(e) {
   const other = 1 - e.paidBy;
   let amt = 0;
   if (e.resp === 'split') amt = Math.round(e.amount / 2);
+  else if (e.resp === 'custom') amt = Math.max(0, Math.min(e.owed || 0, e.amount));
   else if (e.resp === other) amt = e.amount;
   return { from: other, to: e.paidBy, amt };
 }
@@ -473,7 +484,7 @@ function renderMain() {
         <div class="amt"><div class="total">${fmt(it.amount)}</div></div></button>`;
     } else {
       const e = effect(it);
-      const how = it.resp === 'split' ? 'split evenly' : it.resp === it.paidBy ? 'own purchase' : `${name(it.resp)} responsible`;
+      const how = it.resp === 'split' ? 'split 50/50' : it.resp === 'custom' ? 'custom split' : it.resp === it.paidBy ? 'own purchase' : `${name(it.resp)} responsible`;
       const effTxt = e.amt ? `<div class="eff" style="color:${color(e.to)}">${esc(name(e.from))} owes ${fmt(e.amt)}</div>` : `<div class="eff meta">no one owes</div>`;
       html += `<button class="row ${it.createdAt <= last ? 'settled' : ''}" data-id="${it.id}">
         <span class="avatar" style="background:${color(it.paidBy)}">${esc(initial(it.paidBy))}</span>
@@ -529,7 +540,8 @@ function openExpense(id) {
   const ex = id ? data.items.find(i => i.id === id) : null;
   const f = {
     desc: ex ? ex.desc : '', amount: ex ? (ex.amount / 100).toFixed(2) : '',
-    date: ex ? ex.date : today(), paidBy: ex ? ex.paidBy : cfg.me, resp: ex ? ex.resp : 'split'
+    date: ex ? ex.date : today(), paidBy: ex ? ex.paidBy : cfg.me, resp: ex ? ex.resp : 'split',
+    unit: '$', share: ex && ex.resp === 'custom' ? (ex.owed / 100).toFixed(2) : ''
   };
   const sh = openSheet(`
     <h2>${ex ? 'Edit purchase' : 'Add purchase'}</h2>
@@ -537,7 +549,14 @@ function openExpense(id) {
     <div class="field"><label for="x-amt">Total amount</label><div class="money"><span>$</span><input id="x-amt" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" value="${esc(f.amount)}"></div></div>
     <div class="field"><label for="x-date">Date</label><input id="x-date" type="date" value="${f.date}"></div>
     <div class="field"><div class="lbl">Who paid?</div>${segHTML('x-paid', [[0, name(0)], [1, name(1)]], f.paidBy)}</div>
-    <div class="field"><div class="lbl">Who is responsible?</div>${segHTML('x-resp', [['split', 'Split evenly'], [0, name(0)], [1, name(1)]], f.resp)}</div>
+    <div class="field"><div class="lbl">Who is responsible?</div>${segHTML('x-resp', [['split', '50/50'], [0, name(0)], [1, name(1)], ['custom', 'Custom']], f.resp)}</div>
+    <div class="field" id="x-custom" ${f.resp === 'custom' ? '' : 'hidden'}>
+      <label for="x-share" id="x-share-lbl"></label>
+      <div class="share-row">
+        <div class="money"><span id="x-unit">$</span><input id="x-share" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" value="${esc(f.share)}"></div>
+        ${segHTML('x-unitseg', [['$', '$'], ['%', '%']], f.unit).replace('class="seg"', 'class="seg unit"')}
+      </div>
+    </div>
     <div class="preview" id="x-prev"></div>
     <p class="error" id="x-err"></p>
     <div class="stack">
@@ -548,15 +567,29 @@ function openExpense(id) {
   const prev = () => {
     const amount = parseAmount(f.amount);
     const el = $('#x-prev');
+    $('#x-share-lbl').textContent = `${name(1 - f.paidBy)}'s share of the total`;
+    $('#x-unit').textContent = f.unit;
+    $('#x-custom').hidden = f.resp !== 'custom';
     if (!amount) { el.textContent = 'Enter an amount to see who owes what.'; return; }
+    if (f.resp === 'custom') {
+      const owed = customOwed(f, amount);
+      if (owed > amount) { el.textContent = "The share can't be more than the total."; return; }
+      const e = effect({ amount, paidBy: f.paidBy, resp: 'custom', owed });
+      el.innerHTML = e.amt
+        ? `<b>${esc(name(e.from))}</b> will owe <b>${esc(name(e.to))}</b> ${fmt(e.amt)}. ${esc(name(e.to))} covers ${fmt(amount - e.amt)} of ${fmt(amount)}.`
+        : `Enter ${esc(name(e.from))}'s share to see what they owe.`;
+      return;
+    }
     const e = effect({ amount, paidBy: f.paidBy, resp: f.resp });
     el.innerHTML = e.amt ? `<b>${esc(name(e.from))}</b> will owe <b>${esc(name(e.to))}</b> ${fmt(e.amt)}` : `No one owes anything. This is ${esc(name(f.paidBy))}'s own purchase.`;
   };
   $('#x-desc').oninput = e => f.desc = e.target.value;
   $('#x-amt').oninput = e => { f.amount = e.target.value; prev(); };
+  $('#x-share').oninput = e => { f.share = e.target.value; prev(); };
   $('#x-date').onchange = e => f.date = e.target.value;
   bindSeg('x-paid', v => { f.paidBy = Number(v); prev(); });
-  bindSeg('x-resp', v => { f.resp = v === 'split' ? 'split' : Number(v); prev(); });
+  bindSeg('x-resp', v => { f.resp = (v === 'split' || v === 'custom') ? v : Number(v); prev(); });
+  bindSeg('x-unitseg', v => { f.unit = v; prev(); });
   prev();
   if (!ex) setTimeout(() => $('#x-desc') && $('#x-desc').focus(), 350);
 
@@ -566,9 +599,16 @@ function openExpense(id) {
     if (!desc) { err.textContent = 'Add a short description.'; return; }
     if (amount <= 0) { err.textContent = 'Enter an amount greater than zero.'; return; }
     if (!f.date) { err.textContent = 'Pick a date.'; return; }
+    let owed;
+    if (f.resp === 'custom') {
+      owed = customOwed(f, amount);
+      if (!f.share.trim()) { err.textContent = `Enter ${name(1 - f.paidBy)}'s share.`; return; }
+      if (owed > amount) { err.textContent = "The share can't be more than the total."; return; }
+    }
     const now = Date.now();
-    if (ex) Object.assign(ex, { desc, amount, date: f.date, paidBy: f.paidBy, resp: f.resp, updatedAt: now });
-    else data.items.push({ id: uid(), type: 'expense', desc, amount, date: f.date, paidBy: f.paidBy, resp: f.resp, createdAt: now, updatedAt: now, by: cfg.me });
+    const fields = { desc, amount, date: f.date, paidBy: f.paidBy, resp: f.resp, owed: f.resp === 'custom' ? owed : undefined };
+    if (ex) Object.assign(ex, fields, { updatedAt: now });
+    else data.items.push({ id: uid(), type: 'expense', ...fields, createdAt: now, updatedAt: now, by: cfg.me });
     persist(); closeSheet(); render(); sync();
   };
   if (ex) armConfirm($('#x-del'), 'Tap again to delete', () => { ex.deleted = true; ex.updatedAt = Date.now(); persist(); closeSheet(); render(); sync(); });

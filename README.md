@@ -37,9 +37,10 @@ A two-person shared expense tracker that runs as a web app on GitHub Pages and i
 ## Using it
 
 - **Add purchase**: description, date, total, who paid, and who is responsible.
-  - *Split evenly*: the other person owes half.
+  - *50/50*: the other person owes half.
   - *The other person*: the payer bought it entirely for them, so they owe the full amount.
   - *The payer*: their own purchase, nobody owes anything.
+  - *Custom*: enter the other person's share as a dollar amount or a percentage of the total (e.g. 30% or $18.50). They owe the payer that share, and the payer covers the rest.
 - The top of the screen shows the running balance between you.
 - **Settle up** records one payment that zeroes the balance. Settled purchases are dimmed. Tap a settlement to undo it.
 - Tap any purchase to edit or delete it.
