@@ -1,4 +1,4 @@
-# Evenly
+# Expenses Tracker
 
 A two-person shared expense tracker that runs as a web app on GitHub Pages and installs on an iPhone home screen.
 
@@ -31,7 +31,7 @@ A two-person shared expense tracker that runs as a web app on GitHub Pages and i
 ### 4. Install on each iPhone
 1. Open the Pages URL in **Safari**.
 2. Share button > **Add to Home Screen**.
-3. Open Evenly from the home screen, enter `yourname/evenly-data` and the token.
+3. Open Expenses Tracker from the home screen, enter `yourname/evenly-data` and the token.
 4. First person: enter both names. Second person: tap which one they are.
 
 ## Using it

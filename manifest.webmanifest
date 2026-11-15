@@ -1,6 +1,6 @@
 {
-  "name": "Evenly",
-  "short_name": "Evenly",
+  "name": "Expenses Tracker",
+  "short_name": "Expenses Tracker",
   "description": "Track shared expenses between two people.",
   "start_url": "./",
   "scope": "./",

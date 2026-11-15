@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Evenly</title>
+<title>Expenses Tracker</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Evenly">
+<meta name="apple-mobile-web-app-title" content="Expenses Tracker">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#EDF0F5" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#121821" media="(prefers-color-scheme: dark)">
@@ -45,7 +45,7 @@ button{font:inherit;color:inherit}
 
 /* header */
 .top{display:flex;align-items:center;justify-content:space-between;padding:14px 0 4px}
-.wordmark{font-weight:700;font-size:21px;letter-spacing:-.02em}
+.wordmark{font-weight:700;font-size:19px;letter-spacing:-.02em;white-space:nowrap}
 .top .right{display:flex;align-items:center;gap:8px}
 .pill{border:1px solid var(--line-strong);background:transparent;border-radius:999px;padding:5px 12px;font-size:14px;color:var(--muted);display:flex;align-items:center;gap:7px;cursor:pointer}
 .pill i{width:8px;height:8px;border-radius:50%;background:var(--ok);display:block}
@@ -147,7 +147,7 @@ details ol{padding-left:20px;margin:8px 0}
 <script>
 'use strict';
 /* ============================================================
-   Evenly — shared expense tracker for two people.
+   Expenses Tracker — shared expense tracker for two people.
    Data lives in one JSON file in a (private) GitHub repo and is
    read/written through the GitHub Contents API.
    ============================================================ */
@@ -269,7 +269,7 @@ async function sync() {
       if (remote && serialize({ people: remote.people, peopleAt: remote.peopleAt, items: remote.items || [] }) === out) { done = true; break; }
 
       const put = await ghFetch('PUT', {
-        message: `Evenly update from ${name(cfg.me ?? 0)}`,
+        message: `Expenses Tracker update from ${name(cfg.me ?? 0)}`,
         content: enc(out),
         ...(sha ? { sha } : {}),
         ...(cfg.branch ? { branch: cfg.branch } : {})
@@ -312,7 +312,7 @@ function render() {
 const views = {
   setup: () => `
   <div class="wrap setup">
-    <div class="wordmark">Evenly</div>
+    <div class="wordmark">Expenses Tracker</div>
     <h1>Connect your shared ledger</h1>
     <p class="lead">Purchases are saved to a private GitHub repository so both phones stay in step.</p>
     <details><summary>What do I need?</summary>
@@ -334,7 +334,7 @@ const views = {
 
   names: () => `
   <div class="wrap setup">
-    <div class="wordmark">Evenly</div>
+    <div class="wordmark">Expenses Tracker</div>
     <h1>Who is splitting costs?</h1>
     <p class="lead">This is a new ledger. Enter both names. Your partner will pick theirs when they connect.</p>
     <div class="field"><label for="n-me">Your name</label><input id="n-me" type="text" autocapitalize="words" autocomplete="off"></div>
@@ -348,7 +348,7 @@ const views = {
 
   who: () => `
   <div class="wrap setup">
-    <div class="wordmark">Evenly</div>
+    <div class="wordmark">Expenses Tracker</div>
     <h1>Which one are you?</h1>
     <p class="lead">Connected. Pick your name so new purchases default to you.</p>
     <div class="who-btns">
@@ -360,7 +360,7 @@ const views = {
   main: () => `
   <div class="wrap">
     <div class="top">
-      <div class="wordmark">Evenly</div>
+      <div class="wordmark">Expenses Tracker</div>
       <div class="right">
         <button class="pill" id="pill" data-state="idle"><i></i><span>Synced</span></button>
         <button class="icon-btn" id="gear" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
