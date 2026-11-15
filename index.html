@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Evenly</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Evenly">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#EDF0F5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121821" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light dark;
+  --bg:#EDF0F5; --surface:#FFFFFF; --ink:#18212F; --muted:#66718A;
+  --line:#DCE1EB; --line-strong:#C3CBDA;
+  --a:#1B8486; --b:#B03F79; --ok:#2F7D4F; --danger:#C0392B;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#121821; --surface:#1B2330; --ink:#EEF2F8; --muted:#97A3BA;
+    --line:#2A3445; --line-strong:#3A475C;
+    --a:#4FC3C3; --b:#E27AAE; --ok:#6CC28E; --danger:#FF7B6B;
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:'Bricolage Grotesque',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  font-size:17px; line-height:1.35; -webkit-font-smoothing:antialiased;
+  padding-top:env(safe-area-inset-top);
+  font-variant-numeric:tabular-nums;
+}
+body.noscroll{overflow:hidden}
+button{font:inherit;color:inherit}
+.wrap{max-width:560px;margin:0 auto;padding:0 18px calc(120px + env(safe-area-inset-bottom))}
+
+/* header */
+.top{display:flex;align-items:center;justify-content:space-between;padding:14px 0 4px}
+.wordmark{font-weight:700;font-size:21px;letter-spacing:-.02em}
+.top .right{display:flex;align-items:center;gap:8px}
+.pill{border:1px solid var(--line-strong);background:transparent;border-radius:999px;padding:5px 12px;font-size:14px;color:var(--muted);display:flex;align-items:center;gap:7px;cursor:pointer}
+.pill i{width:8px;height:8px;border-radius:50%;background:var(--ok);display:block}
+.pill[data-state="syncing"] i{background:var(--muted)}
+.pill[data-state="error"] i{background:var(--danger)}
+.icon-btn{width:38px;height:38px;border-radius:50%;border:0;background:transparent;display:grid;place-items:center;cursor:pointer}
+.icon-btn:active{background:var(--line)}
+.icon-btn svg{width:22px;height:22px;stroke:var(--ink);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* hero */
+.hero{text-align:center;padding:14px 0 26px}
+.seesaw{position:relative;height:80px;margin:10px 8px 22px}
+.beam{position:absolute;left:0;right:0;top:24px;height:5px;border-radius:3px;background:var(--ink);transform:rotate(var(--tilt,0deg));transition:transform .9s cubic-bezier(.3,1.5,.5,1)}
+.pan{position:absolute;top:-17px;width:39px;height:39px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:16px;color:var(--bg)}
+.pan.a{left:-8px;background:var(--a)}
+.pan.b{right:-8px;background:var(--b)}
+.pivot{position:absolute;left:50%;top:30px;transform:translateX(-50%);border-left:15px solid transparent;border-right:15px solid transparent;border-bottom:28px solid var(--line-strong)}
+.owes{margin:0;font-size:20px;font-weight:600;letter-spacing:-.01em}
+.owes .na{color:var(--a)} .owes .nb{color:var(--b)}
+.amount{margin:2px 0 4px;font-size:60px;line-height:1.05;font-weight:700;letter-spacing:-.035em}
+.sub{margin:0 0 20px;color:var(--muted);font-size:15px}
+.btn{display:block;width:100%;border:0;border-radius:14px;padding:15px 18px;font-weight:600;font-size:17px;cursor:pointer;background:var(--ink);color:var(--bg)}
+.btn:active{opacity:.85}
+.btn:disabled{opacity:.35;cursor:default}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line-strong)}
+.btn.danger{background:transparent;color:var(--danger);border:1.5px solid var(--danger)}
+.btn.small{display:inline-block;width:auto;padding:11px 26px}
+.hero .btn{display:inline-block;width:auto;padding:12px 30px}
+
+/* list */
+.month{margin:6px 4px 8px;font-size:15px;font-weight:600;color:var(--muted)}
+.group{background:var(--surface);border-radius:18px;overflow:hidden;margin-bottom:20px}
+.row{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;width:100%;padding:13px 14px;border:0;border-top:1px solid var(--line);background:none;text-align:left;cursor:pointer}
+.row:first-child{border-top:0}
+.row:active{background:var(--bg)}
+.row.settled{opacity:.5}
+.avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:15px;color:var(--bg)}
+.avatar.ok{background:var(--ok)}
+.desc{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.meta{font-size:14px;color:var(--muted);margin-top:1px}
+.amt{text-align:right}
+.total{font-weight:600}
+.eff{font-size:14px;margin-top:1px}
+.empty{text-align:center;color:var(--muted);padding:34px 20px}
+.empty b{display:block;color:var(--ink);font-size:19px;margin-bottom:4px}
+
+.fab{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);border:0;border-radius:999px;background:var(--ink);color:var(--bg);font-weight:600;font-size:17px;padding:15px 26px;box-shadow:0 8px 24px rgba(10,20,40,.28);cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap}
+.fab:active{transform:translateX(-50%) scale(.97)}
+.fab svg{width:18px;height:18px;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;fill:none}
+
+/* sheet */
+#sheet-root .backdrop{position:fixed;inset:0;background:rgba(8,14,26,.45);opacity:0;transition:opacity .25s;z-index:10}
+#sheet-root.open .backdrop{opacity:1}
+#sheet-root .sheet{position:fixed;left:50%;bottom:0;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;background:var(--surface);border-radius:24px 24px 0 0;padding:10px 18px calc(20px + env(safe-area-inset-bottom));transform:translate(-50%,100%);transition:transform .28s cubic-bezier(.2,.9,.3,1);z-index:11}
+#sheet-root.open .sheet{transform:translate(-50%,0)}
+.grab{width:40px;height:5px;border-radius:3px;background:var(--line-strong);margin:0 auto 14px}
+.sheet h2{margin:0 0 14px;font-size:22px;letter-spacing:-.02em}
+.field{margin-bottom:14px}
+.field>label,.field>.lbl{display:block;font-size:14px;color:var(--muted);margin-bottom:6px}
+input[type=text],input[type=password],input[type=date],input[type=search],input[type=url]{
+  width:100%;min-height:48px;font:inherit;font-size:17px;padding:11px 14px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);-webkit-appearance:none;appearance:none
+}
+input:focus-visible,button:focus-visible{outline:2px solid var(--a);outline-offset:2px}
+.money{position:relative}
+.money span{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.money input{padding-left:30px}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;padding:12px 6px;border-radius:12px;border:1.5px solid var(--line-strong);background:transparent;font-weight:600;cursor:pointer;font-size:16px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.preview{background:var(--bg);border-radius:12px;padding:12px 14px;font-size:15px;color:var(--muted);margin:2px 0 16px;min-height:46px}
+.preview b{color:var(--ink)}
+.stack{display:grid;gap:10px}
+.note{font-size:14px;color:var(--muted);margin:0 0 14px}
+.note a{color:var(--ink)}
+.error{color:var(--danger);font-size:15px;margin:0 0 12px;min-height:0}
+
+/* setup */
+.setup{padding-top:28px}
+.setup h1{font-size:34px;letter-spacing:-.03em;line-height:1.08;margin:6px 0 10px}
+.setup p.lead{color:var(--muted);margin:0 0 22px}
+details{margin:0 0 20px;color:var(--muted);font-size:15px}
+details summary{cursor:pointer;color:var(--ink);font-weight:600;margin-bottom:6px}
+details ol{padding-left:20px;margin:8px 0}
+.who-btns{display:grid;gap:10px}
+.who-btns .btn{text-align:left;display:flex;align-items:center;gap:12px}
+
+#toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 10px);transform:translate(-50%,-140%);background:var(--ink);color:var(--bg);padding:11px 18px;border-radius:14px;font-size:15px;max-width:min(92vw,520px);z-index:30;transition:transform .3s;box-shadow:0 8px 24px rgba(10,20,40,.3)}
+#toast.show{transform:translate(-50%,0)}
+@media (prefers-reduced-motion: reduce){
+  .beam,#sheet-root .sheet,#sheet-root .backdrop,#toast{transition:none}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="sheet-root"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+'use strict';
+/* ============================================================
+   Evenly — shared expense tracker for two people.
+   Data lives in one JSON file in a (private) GitHub repo and is
+   read/written through the GitHub Contents API.
+   ============================================================ */
+const CURRENCY = 'USD';
+const LOCALE = 'en-US';
+const DEFAULT_PATH = 'ledger.json';
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d; } catch { return d; } };
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+const fmt = c => (c / 100).toLocaleString(LOCALE, { style: 'currency', currency: CURRENCY });
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+const parseDate = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const shortDate = s => parseDate(s).toLocaleDateString(LOCALE, { month: 'short', day: 'numeric' });
+const monthLabel = s => parseDate(s).toLocaleDateString(LOCALE, { month: 'long', year: 'numeric' });
+const parseAmount = s => { const n = parseFloat(String(s).replace(/[^0-9.]/g, '')); return isFinite(n) ? Math.round(n * 100) : 0; };
+
+/* ---------- state ---------- */
+let cfg = load('evenly.cfg', null);                       // { repo, path, branch, token, me }
+let data = load('evenly.data', { people: [], peopleAt: 0, items: [] });
+const persist = () => localStorage.setItem('evenly.data', JSON.stringify(data));
+const saveCfg = () => localStorage.setItem('evenly.cfg', JSON.stringify(cfg));
+let status = { state: 'idle', msg: '', at: 0 };
+let lastView = null;
+
+const name = i => data.people[i] || '?';
+const color = i => i === 0 ? 'var(--a)' : 'var(--b)';
+const initial = i => (name(i)[0] || '?').toUpperCase();
+const active = () => data.items.filter(i => !i.deleted);
+
+/* ---------- money logic ---------- */
+// Who owes whom, and how much, because of a single purchase.
+function effect(e) {
+  const other = 1 - e.paidBy;
+  let amt = 0;
+  if (e.resp === 'split') amt = Math.round(e.amount / 2);
+  else if (e.resp === other) amt = e.amount;
+  return { from: other, to: e.paidBy, amt };
+}
+// net > 0: person 2 owes person 1. net < 0: person 1 owes person 2.
+function computeNet() {
+  let net = 0;
+  for (const it of active()) {
+    if (it.type === 'expense') {
+      const e = effect(it);
+      net += e.to === 0 ? e.amt : -e.amt;
+    } else if (it.type === 'settlement') {
+      net += it.from === 0 ? it.amount : -it.amount;
+    }
+  }
+  return net;
+}
+const lastSettledAt = () => Math.max(0, ...active().filter(i => i.type === 'settlement').map(i => i.createdAt));
+
+/* ---------- GitHub sync ---------- */
+const enc = s => { let b = ''; new TextEncoder().encode(s).forEach(x => b += String.fromCharCode(x)); return btoa(b); };
+const dec = b => new TextDecoder().decode(Uint8Array.from(atob(b.replace(/\s/g, '')), c => c.charCodeAt(0)));
+
+function ghFetch(method, body, url) {
+  const u = url || `https://api.github.com/repos/${cfg.repo}/contents/${cfg.path.split('/').map(encodeURIComponent).join('/')}` +
+    (method === 'GET' && cfg.branch ? `?ref=${encodeURIComponent(cfg.branch)}` : '');
+  return fetch(u, {
+    method, cache: 'no-store',
+    headers: {
+      'Authorization': `Bearer ${cfg.token}`,
+      'Accept': 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      ...(body ? { 'Content-Type': 'application/json' } : {})
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+}
+async function apiError(res) {
+  let m = ''; try { m = (await res.json()).message || ''; } catch {}
+  if (res.status === 401) return new Error('GitHub rejected the token. Check that it is correct and has not expired.');
+  if (res.status === 403) return new Error('GitHub refused access (' + (m || 'forbidden') + '). Check the token has Contents read and write.');
+  if (res.status === 404) return new Error('Repository not found, or the token cannot access it.');
+  return new Error(`GitHub error ${res.status}: ${m}`);
+}
+
+const sortItems = a => [...a].sort((x, y) => x.createdAt - y.createdAt || (x.id < y.id ? -1 : 1));
+const serialize = d => JSON.stringify({ schema: 1, people: d.people, peopleAt: d.peopleAt || 0, items: sortItems(d.items) }, null, 1);
+
+function merge(local, remote) {
+  const out = { people: local.people, peopleAt: local.peopleAt || 0, items: [] };
+  if (remote && remote.people && remote.people.length === 2 && (remote.peopleAt || 0) >= (local.peopleAt || 0)) {
+    out.people = remote.people; out.peopleAt = remote.peopleAt || 0;
+  }
+  const map = new Map();
+  for (const it of [...(remote?.items || []), ...local.items]) {
+    const cur = map.get(it.id);
+    if (!cur || it.updatedAt > cur.updatedAt) map.set(it.id, it);
+  }
+  out.items = [...map.values()];
+  return out;
+}
+
+let syncing = false, again = false;
+async function sync() {
+  if (!cfg) return;
+  if (syncing) { again = true; return; }
+  syncing = true; setStatus('syncing');
+  try {
+    let done = false;
+    for (let n = 0; n < 4 && !done; n++) {
+      const res = await ghFetch('GET');
+      let remote = null, sha = null;
+      if (res.status === 200) {
+        const j = await res.json();
+        sha = j.sha;
+        remote = JSON.parse(dec(j.content));
+      } else if (res.status !== 404) throw await apiError(res);
+
+      data = merge(data, remote); persist();
+      if (data.people.length !== 2) { done = true; break; }   // waiting for names
+
+      const out = serialize(data);
+      if (remote && serialize({ people: remote.people, peopleAt: remote.peopleAt, items: remote.items || [] }) === out) { done = true; break; }
+
+      const put = await ghFetch('PUT', {
+        message: `Evenly update from ${name(cfg.me ?? 0)}`,
+        content: enc(out),
+        ...(sha ? { sha } : {}),
+        ...(cfg.branch ? { branch: cfg.branch } : {})
+      });
+      if (put.ok) { done = true; break; }
+      if (put.status === 409 || put.status === 422) continue;   // someone else saved first: re-merge and retry
+      throw await apiError(put);
+    }
+    if (!done) throw new Error('Could not save after several tries. Pull to refresh and try again.');
+    setStatus('ok');
+  } catch (e) {
+    const offline = e instanceof TypeError;
+    setStatus('error', offline ? 'No connection. Changes are saved on this phone and will sync later.' : e.message);
+  } finally {
+    syncing = false; render();
+    if (again) { again = false; sync(); }
+  }
+}
+function setStatus(state, msg = '') { status = { state, msg, at: state === 'ok' ? Date.now() : status.at }; updateStatus(); }
+function updateStatus() {
+  const p = $('#pill'); if (!p) return;
+  p.dataset.state = status.state;
+  p.querySelector('span').textContent = status.state === 'syncing' ? 'Syncing' : status.state === 'error' ? 'Not synced' : 'Synced';
+}
+
+/* ---------- views ---------- */
+function currentView() {
+  if (!cfg) return 'setup';
+  if (data.people.length !== 2) return 'names';
+  if (cfg.me !== 0 && cfg.me !== 1) return 'who';
+  return 'main';
+}
+function render() {
+  const v = currentView();
+  if (v !== lastView) { lastView = v; $('#app').innerHTML = views[v](); bind[v]?.(); }
+  if (v === 'main') renderMain();
+  updateStatus();
+}
+
+const views = {
+  setup: () => `
+  <div class="wrap setup">
+    <div class="wordmark">Evenly</div>
+    <h1>Connect your shared ledger</h1>
+    <p class="lead">Purchases are saved to a private GitHub repository so both phones stay in step.</p>
+    <details><summary>What do I need?</summary>
+      <ol>
+        <li>A <b>private</b> GitHub repository to hold the data (create it with a README).</li>
+        <li>A fine-grained access token limited to that repository, with <b>Contents: Read and write</b>.</li>
+      </ol>
+      Both phones use the same repository and token. The token is stored only on this device.
+    </details>
+    <div class="field"><label for="f-repo">Data repository (owner/name)</label><input id="f-repo" type="text" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="yourname/evenly-data"></div>
+    <div class="field"><label for="f-token">Access token</label><input id="f-token" type="password" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="github_pat_…"></div>
+    <details><summary>Advanced</summary>
+      <div class="field"><label for="f-path">Data file path</label><input id="f-path" type="text" autocapitalize="off" autocorrect="off" spellcheck="false" value="${DEFAULT_PATH}"></div>
+      <div class="field"><label for="f-branch">Branch (leave blank for default)</label><input id="f-branch" type="text" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+    </details>
+    <p class="error" id="setup-err"></p>
+    <button class="btn" id="connect">Connect</button>
+  </div>`,
+
+  names: () => `
+  <div class="wrap setup">
+    <div class="wordmark">Evenly</div>
+    <h1>Who is splitting costs?</h1>
+    <p class="lead">This is a new ledger. Enter both names. Your partner will pick theirs when they connect.</p>
+    <div class="field"><label for="n-me">Your name</label><input id="n-me" type="text" autocapitalize="words" autocomplete="off"></div>
+    <div class="field"><label for="n-you">Your partner's name</label><input id="n-you" type="text" autocapitalize="words" autocomplete="off"></div>
+    <p class="error" id="names-err"></p>
+    <div class="stack">
+      <button class="btn" id="names-save">Start tracking</button>
+      <button class="btn ghost" id="names-back">Back</button>
+    </div>
+  </div>`,
+
+  who: () => `
+  <div class="wrap setup">
+    <div class="wordmark">Evenly</div>
+    <h1>Which one are you?</h1>
+    <p class="lead">Connected. Pick your name so new purchases default to you.</p>
+    <div class="who-btns">
+      <button class="btn" data-me="0"><span class="avatar" style="background:var(--a)">${esc(initial(0))}</span>I'm ${esc(name(0))}</button>
+      <button class="btn" data-me="1"><span class="avatar" style="background:var(--b)">${esc(initial(1))}</span>I'm ${esc(name(1))}</button>
+    </div>
+  </div>`,
+
+  main: () => `
+  <div class="wrap">
+    <div class="top">
+      <div class="wordmark">Evenly</div>
+      <div class="right">
+        <button class="pill" id="pill" data-state="idle"><i></i><span>Synced</span></button>
+        <button class="icon-btn" id="gear" aria-label="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+      </div>
+    </div>
+    <section class="hero" aria-live="polite">
+      <div class="seesaw"><div class="beam" id="beam"><span class="pan a" id="pan-a"></span><span class="pan b" id="pan-b"></span></div><div class="pivot"></div></div>
+      <p class="owes" id="owes"></p>
+      <p class="amount" id="amount"></p>
+      <p class="sub" id="sub"></p>
+      <button class="btn" id="settle">Settle up</button>
+    </section>
+    <div id="list"></div>
+  </div>
+  <button class="fab" id="add"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add purchase</button>`
+};
+
+const bind = {
+  setup() {
+    const c = cfg || {};
+    $('#connect').onclick = async () => {
+      const repo = $('#f-repo').value.trim().replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').replace(/\/$/, '');
+      const token = $('#f-token').value.trim();
+      const path = ($('#f-path').value.trim() || DEFAULT_PATH).replace(/^\//, '');
+      const branch = $('#f-branch').value.trim();
+      const err = $('#setup-err'); err.textContent = '';
+      if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) { err.textContent = 'Enter the repository as owner/name.'; return; }
+      if (!token) { err.textContent = 'Paste your access token.'; return; }
+      const btn = $('#connect'); btn.disabled = true; btn.textContent = 'Connecting…';
+      const trial = { repo, token, path, branch, me: null };
+      try {
+        const res = await fetch(`https://api.github.com/repos/${repo}`, { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' }, cache: 'no-store' });
+        if (!res.ok) { cfg = trial; throw await apiError(res); }
+        const j = await res.json();
+        if (j.permissions && j.permissions.push === false) throw new Error('This token can read the repository but not write to it. Give it Contents: Read and write.');
+        if (!j.private) { /* allowed, but warn */ toast('Heads up: this repository is public, so anyone can read your expenses.'); }
+        cfg = trial; saveCfg();
+        lastView = null; await sync();
+        render();
+      } catch (e) {
+        cfg = null;
+        err.textContent = e instanceof TypeError ? 'No connection. Check your internet and try again.' : e.message;
+        btn.disabled = false; btn.textContent = 'Connect';
+      }
+    };
+  },
+  names() {
+    $('#names-back').onclick = () => { cfg = null; localStorage.removeItem('evenly.cfg'); lastView = null; render(); };
+    $('#names-save').onclick = () => {
+      const a = $('#n-me').value.trim(), b = $('#n-you').value.trim();
+      if (!a || !b) { $('#names-err').textContent = 'Enter both names.'; return; }
+      if (a.toLowerCase() === b.toLowerCase()) { $('#names-err').textContent = 'The two names need to be different.'; return; }
+      data.people = [a, b]; data.peopleAt = Date.now(); cfg.me = 0; saveCfg(); persist();
+      render(); sync();
+    };
+  },
+  who() {
+    document.querySelectorAll('[data-me]').forEach(b => b.onclick = () => { cfg.me = Number(b.dataset.me); saveCfg(); render(); });
+  },
+  main() {
+    $('#add').onclick = () => openExpense();
+    $('#gear').onclick = openSettings;
+    $('#settle').onclick = openSettle;
+    $('#pill').onclick = () => toast(status.state === 'error' ? status.msg : status.at ? 'Last synced ' + new Date(status.at).toLocaleTimeString(LOCALE, { hour: 'numeric', minute: '2-digit' }) : 'Syncing…');
+    $('#list').onclick = e => {
+      const r = e.target.closest('[data-id]'); if (!r) return;
+      const it = data.items.find(i => i.id === r.dataset.id);
+      if (it) it.type === 'settlement' ? openSettlement(it.id) : openExpense(it.id);
+    };
+    $('#pan-a').textContent = initial(0); $('#pan-b').textContent = initial(1);
+  }
+};
+
+function renderMain() {
+  const net = computeNet();
+  const debtor = net > 0 ? 1 : 0, creditor = 1 - debtor;
+  const amt = Math.abs(net);
+
+  $('#pan-a').textContent = initial(0); $('#pan-b').textContent = initial(1);
+  let tilt = 0;
+  if (net !== 0) tilt = (debtor === 1 ? 1 : -1) * Math.min(9, 1.5 + Math.sqrt(amt / 100) * 0.8);
+  setTimeout(() => $('#beam') && $('#beam').style.setProperty('--tilt', tilt + 'deg'), 60);
+
+  const nm = i => `<span class="${i === 0 ? 'na' : 'nb'}">${esc(name(i))}</span>`;
+  $('#owes').innerHTML = net === 0 ? 'All square'
+    : `${nm(debtor)} owes ${nm(creditor)}`;
+  $('#amount').textContent = fmt(amt);
+
+  const last = lastSettledAt();
+  const unsettled = active().filter(i => i.type === 'expense' && i.createdAt > last).length;
+  $('#sub').textContent = net === 0
+    ? (unsettled ? `${unsettled} purchase${unsettled === 1 ? '' : 's'} since the last settlement, all evened out` : 'Nothing outstanding')
+    : `From ${unsettled} unsettled purchase${unsettled === 1 ? '' : 's'}`;
+  $('#settle').style.display = net === 0 ? 'none' : '';
+
+  // list
+  const items = active().sort((x, y) => (y.date > x.date ? 1 : y.date < x.date ? -1 : y.createdAt - x.createdAt));
+  if (!items.length) {
+    $('#list').innerHTML = `<div class="empty"><b>No purchases yet</b>Tap “Add purchase” to log the first one.</div>`;
+    return;
+  }
+  let html = '', curMonth = '';
+  for (const it of items) {
+    const m = monthLabel(it.date);
+    if (m !== curMonth) { if (curMonth) html += '</div>'; html += `<h3 class="month">${esc(m)}</h3><div class="group">`; curMonth = m; }
+    if (it.type === 'settlement') {
+      html += `<button class="row" data-id="${it.id}">
+        <span class="avatar ok">✓</span>
+        <div><div class="desc">Settled up</div><div class="meta">${esc(name(it.from))} paid ${esc(name(it.to))} · ${shortDate(it.date)}</div></div>
+        <div class="amt"><div class="total">${fmt(it.amount)}</div></div></button>`;
+    } else {
+      const e = effect(it);
+      const how = it.resp === 'split' ? 'split evenly' : it.resp === it.paidBy ? 'own purchase' : `${name(it.resp)} responsible`;
+      const effTxt = e.amt ? `<div class="eff" style="color:${color(e.to)}">${esc(name(e.from))} owes ${fmt(e.amt)}</div>` : `<div class="eff meta">no one owes</div>`;
+      html += `<button class="row ${it.createdAt <= last ? 'settled' : ''}" data-id="${it.id}">
+        <span class="avatar" style="background:${color(it.paidBy)}">${esc(initial(it.paidBy))}</span>
+        <div style="min-width:0"><div class="desc">${esc(it.desc)}</div><div class="meta">${esc(name(it.paidBy))} paid · ${how} · ${shortDate(it.date)}</div></div>
+        <div class="amt"><div class="total">${fmt(it.amount)}</div>${effTxt}</div></button>`;
+    }
+  }
+  $('#list').innerHTML = html + '</div>';
+}
+
+/* ---------- sheets ---------- */
+let closeTimer;
+function openSheet(html) {
+  clearTimeout(closeTimer);
+  const r = $('#sheet-root');
+  r.innerHTML = `<div class="backdrop"></div><div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>${html}</div>`;
+  document.body.classList.add('noscroll');
+  requestAnimationFrame(() => requestAnimationFrame(() => r.classList.add('open')));
+  r.querySelector('.backdrop').onclick = closeSheet;
+  return r.querySelector('.sheet');
+}
+function closeSheet() {
+  const r = $('#sheet-root'); r.classList.remove('open');
+  document.body.classList.remove('noscroll');
+  closeTimer = setTimeout(() => { r.innerHTML = ''; }, 280);
+}
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3800);
+}
+// two-tap confirmation for destructive buttons
+function armConfirm(btn, label, action) {
+  let armed = false, timer;
+  btn.onclick = () => {
+    if (!armed) { armed = true; btn.textContent = label; timer = setTimeout(() => { armed = false; btn.textContent = btn.dataset.label; }, 3500); }
+    else { clearTimeout(timer); action(); }
+  };
+  btn.dataset.label = btn.textContent;
+}
+function segHTML(id, opts, val) {
+  return `<div class="seg" id="${id}">${opts.map(([v, l]) => `<button type="button" data-v="${v}" aria-pressed="${String(v) === String(val)}">${esc(l)}</button>`).join('')}</div>`;
+}
+function bindSeg(id, onChange) {
+  const el = $('#' + id);
+  el.querySelectorAll('button').forEach(b => b.onclick = () => {
+    el.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+    onChange(b.dataset.v);
+  });
+}
+
+function openExpense(id) {
+  const ex = id ? data.items.find(i => i.id === id) : null;
+  const f = {
+    desc: ex ? ex.desc : '', amount: ex ? (ex.amount / 100).toFixed(2) : '',
+    date: ex ? ex.date : today(), paidBy: ex ? ex.paidBy : cfg.me, resp: ex ? ex.resp : 'split'
+  };
+  const sh = openSheet(`
+    <h2>${ex ? 'Edit purchase' : 'Add purchase'}</h2>
+    <div class="field"><label for="x-desc">What was it for?</label><input id="x-desc" type="text" autocomplete="off" autocapitalize="sentences" value="${esc(f.desc)}"></div>
+    <div class="field"><label for="x-amt">Total amount</label><div class="money"><span>$</span><input id="x-amt" type="text" inputmode="decimal" autocomplete="off" placeholder="0.00" value="${esc(f.amount)}"></div></div>
+    <div class="field"><label for="x-date">Date</label><input id="x-date" type="date" value="${f.date}"></div>
+    <div class="field"><div class="lbl">Who paid?</div>${segHTML('x-paid', [[0, name(0)], [1, name(1)]], f.paidBy)}</div>
+    <div class="field"><div class="lbl">Who is responsible?</div>${segHTML('x-resp', [['split', 'Split evenly'], [0, name(0)], [1, name(1)]], f.resp)}</div>
+    <div class="preview" id="x-prev"></div>
+    <p class="error" id="x-err"></p>
+    <div class="stack">
+      <button class="btn" id="x-save">${ex ? 'Save changes' : 'Add purchase'}</button>
+      ${ex ? '<button class="btn danger" id="x-del">Delete purchase</button>' : ''}
+    </div>`);
+
+  const prev = () => {
+    const amount = parseAmount(f.amount);
+    const el = $('#x-prev');
+    if (!amount) { el.textContent = 'Enter an amount to see who owes what.'; return; }
+    const e = effect({ amount, paidBy: f.paidBy, resp: f.resp });
+    el.innerHTML = e.amt ? `<b>${esc(name(e.from))}</b> will owe <b>${esc(name(e.to))}</b> ${fmt(e.amt)}` : `No one owes anything. This is ${esc(name(f.paidBy))}'s own purchase.`;
+  };
+  $('#x-desc').oninput = e => f.desc = e.target.value;
+  $('#x-amt').oninput = e => { f.amount = e.target.value; prev(); };
+  $('#x-date').onchange = e => f.date = e.target.value;
+  bindSeg('x-paid', v => { f.paidBy = Number(v); prev(); });
+  bindSeg('x-resp', v => { f.resp = v === 'split' ? 'split' : Number(v); prev(); });
+  prev();
+  if (!ex) setTimeout(() => $('#x-desc') && $('#x-desc').focus(), 350);
+
+  $('#x-save').onclick = () => {
+    const amount = parseAmount(f.amount), desc = f.desc.trim();
+    const err = $('#x-err');
+    if (!desc) { err.textContent = 'Add a short description.'; return; }
+    if (amount <= 0) { err.textContent = 'Enter an amount greater than zero.'; return; }
+    if (!f.date) { err.textContent = 'Pick a date.'; return; }
+    const now = Date.now();
+    if (ex) Object.assign(ex, { desc, amount, date: f.date, paidBy: f.paidBy, resp: f.resp, updatedAt: now });
+    else data.items.push({ id: uid(), type: 'expense', desc, amount, date: f.date, paidBy: f.paidBy, resp: f.resp, createdAt: now, updatedAt: now, by: cfg.me });
+    persist(); closeSheet(); render(); sync();
+  };
+  if (ex) armConfirm($('#x-del'), 'Tap again to delete', () => { ex.deleted = true; ex.updatedAt = Date.now(); persist(); closeSheet(); render(); sync(); });
+}
+
+function openSettle() {
+  const net = computeNet(); if (!net) return;
+  const from = net > 0 ? 1 : 0, to = 1 - from, amount = Math.abs(net);
+  openSheet(`
+    <h2>Settle up</h2>
+    <div class="preview" style="margin-bottom:16px"><b>${esc(name(from))}</b> pays <b>${esc(name(to))}</b> ${fmt(amount)} in one payment to clear every outstanding balance.</div>
+    <p class="note">Make the payment outside the app, then record it here. This sets the balance to zero. Past purchases stay in the list.</p>
+    <div class="stack">
+      <button class="btn" id="s-go">Record ${fmt(amount)} settlement</button>
+      <button class="btn ghost" id="s-cancel">Cancel</button>
+    </div>`);
+  $('#s-cancel').onclick = closeSheet;
+  $('#s-go').onclick = () => {
+    const now = Date.now();
+    data.items.push({ id: uid(), type: 'settlement', amount, from, to, date: today(), createdAt: now, updatedAt: now, by: cfg.me });
+    persist(); closeSheet(); render(); sync();
+  };
+}
+
+function openSettlement(id) {
+  const it = data.items.find(i => i.id === id);
+  openSheet(`
+    <h2>Settlement</h2>
+    <div class="preview"><b>${esc(name(it.from))}</b> paid <b>${esc(name(it.to))}</b> ${fmt(it.amount)} on ${shortDate(it.date)}.</div>
+    <p class="note">Undoing a settlement brings back the balance it cleared.</p>
+    <div class="stack">
+      <button class="btn danger" id="u-go">Undo settlement</button>
+      <button class="btn ghost" id="u-close">Close</button>
+    </div>`);
+  $('#u-close').onclick = closeSheet;
+  armConfirm($('#u-go'), 'Tap again to undo', () => { it.deleted = true; it.updatedAt = Date.now(); persist(); closeSheet(); render(); sync(); });
+}
+
+function openSettings() {
+  openSheet(`
+    <h2>Settings</h2>
+    <div class="field"><div class="lbl">I am</div>${segHTML('st-me', [[0, name(0)], [1, name(1)]], cfg.me)}</div>
+    <div class="field"><label for="st-a">First name</label><input id="st-a" type="text" value="${esc(name(0))}"></div>
+    <div class="field"><label for="st-b">Second name</label><input id="st-b" type="text" value="${esc(name(1))}"></div>
+    <p class="note">Syncing with <b>${esc(cfg.repo)}</b>, file ${esc(cfg.path)}.</p>
+    <p class="error" id="st-err"></p>
+    <div class="stack">
+      <button class="btn" id="st-save">Save names</button>
+      <button class="btn ghost" id="st-sync">Sync now</button>
+      <button class="btn danger" id="st-out">Disconnect this phone</button>
+    </div>`);
+  bindSeg('st-me', v => { cfg.me = Number(v); saveCfg(); render(); });
+  $('#st-save').onclick = () => {
+    const a = $('#st-a').value.trim(), b = $('#st-b').value.trim();
+    if (!a || !b || a.toLowerCase() === b.toLowerCase()) { $('#st-err').textContent = 'Enter two different names.'; return; }
+    data.people = [a, b]; data.peopleAt = Date.now(); persist(); closeSheet(); lastView = null; render(); sync();
+  };
+  $('#st-sync').onclick = () => { closeSheet(); sync(); };
+  armConfirm($('#st-out'), 'Tap again to disconnect', () => {
+    localStorage.removeItem('evenly.cfg'); localStorage.removeItem('evenly.data');
+    cfg = null; data = { people: [], peopleAt: 0, items: [] }; closeSheet(); lastView = null; render();
+    toast('Disconnected. Your data is still in the GitHub repository.');
+  });
+}
+
+/* ---------- boot ---------- */
+document.addEventListener('visibilitychange', () => { if (!document.hidden && cfg) sync(); });
+window.addEventListener('online', () => { if (cfg) sync(); });
+setInterval(() => { if (!document.hidden && cfg && currentView() === 'main' && !$('#sheet-root').classList.contains('open')) sync(); }, 30000);
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+render();
+if (cfg) sync();
+</script>
+</body>
+</html>
