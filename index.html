@@ -751,6 +751,47 @@ function setColor(i, c, box) {
   clearTimeout(colorSyncTimer); colorSyncTimer = setTimeout(sync, 700);
 }
 
+/* ---------- export ---------- */
+function csvCell(v) {
+  let t = String(v ?? '');
+  if (/^[=+\-@\t\r]/.test(t)) t = "'" + t;                 // stop spreadsheets treating text as a formula
+  return /[",\n\r]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
+}
+function buildCSV() {
+  const last = lastSettledAt();
+  const money = c => (c / 100).toFixed(2);
+  const rows = [['Type', 'Date', 'Description', 'Paid by', 'Responsible', 'Total', 'Amount owed', 'Who owes', 'Status']];
+  const items = active().sort((x, y) => (x.date < y.date ? -1 : x.date > y.date ? 1 : x.createdAt - y.createdAt));
+  for (const it of items) {
+    if (it.type === 'settlement') {
+      rows.push(['Settlement', it.date, `Settled up: ${name(it.from)} paid ${name(it.to)}`, name(it.from), '', money(it.amount), '', '', 'Settled']);
+    } else {
+      const e = effect(it);
+      const resp = it.resp === 'split' ? 'Split 50/50'
+        : it.resp === 'custom' ? `Custom (${name(e.from)} owes ${money(e.amt)})`
+        : name(it.resp);
+      rows.push(['Purchase', it.date, it.desc, name(it.paidBy), resp, money(it.amount), money(e.amt), e.amt ? name(e.from) : '', it.createdAt <= last ? 'Settled' : 'Unsettled']);
+    }
+  }
+  return rows.map(r => r.map(csvCell).join(',')).join('\r\n');
+}
+async function exportCSV() {
+  if (!active().length) { toast('Nothing to export yet.'); return; }
+  const csv = '\ufeff' + buildCSV(), fname = `expenses-${today()}.csv`;
+  const file = new File([csv], fname, { type: 'text/csv' });
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {   // iPhone share sheet: Save to Files, AirDrop, Mail...
+      await navigator.share({ files: [file], title: 'Expenses' });
+      return;
+    }
+  } catch (e) { if (e.name === 'AbortError') return; }
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a'); a.href = url; a.download = fname;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  toast('Exported ' + fname);
+}
+
 function openSettings() {
   openSheet(`
     <div class="compact">
@@ -766,6 +807,7 @@ function openSettings() {
       <button class="btn" id="st-save">Save names</button>
       <button class="btn ghost" id="st-sync">Sync now</button>
     </div>
+    <button class="btn ghost" id="st-export" style="margin-top:10px;padding:13px 10px;font-size:16px">Export expenses (CSV)</button>
     <button class="textbtn" id="st-out">Disconnect this phone</button>
     </div>`);
   // only the signed-in person's own circle color is editable here
@@ -784,6 +826,7 @@ function openSettings() {
     data.people = [a, b]; data.peopleAt = Date.now(); persist(); closeSheet(); lastView = null; render(); sync();
   };
   $('#st-sync').onclick = () => { closeSheet(); sync(); };
+  $('#st-export').onclick = exportCSV;
   armConfirm($('#st-out'), 'Tap again to disconnect', () => {
     localStorage.removeItem('evenly.cfg'); localStorage.removeItem('evenly.data');
     cfg = null; data = { people: [], peopleAt: 0, colors: [null, null], colorsAt: [0, 0], items: [] }; closeSheet(); lastView = null; render();
