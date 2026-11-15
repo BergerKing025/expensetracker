@@ -32,7 +32,7 @@
   }
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html{-webkit-text-size-adjust:100%}
+html{-webkit-text-size-adjust:100%;background:var(--bg)}
 body{
   margin:0; background:var(--bg); color:var(--ink);
   font-family:'Bricolage Grotesque',-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
@@ -839,7 +839,18 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#sheet-
 document.addEventListener('visibilitychange', () => { if (!document.hidden && cfg) sync(); });
 window.addEventListener('online', () => { if (cfg) sync(); });
 setInterval(() => { if (!document.hidden && cfg && currentView() === 'main' && !$('#sheet-root').classList.contains('open')) sync(); }, 30000);
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator) {
+  // Pick up new versions quickly: check on launch and on returning to the app, and reload once when an update takes over.
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloaded = false;
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' }).then(reg => {
+    reg.update();
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update(); });
+  }).catch(() => {});
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (hadController && !reloaded && !$('#sheet-root').classList.contains('open')) { reloaded = true; location.reload(); }
+  });
+}
 render();
 if (cfg) sync();
 </script>
