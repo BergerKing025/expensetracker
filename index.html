@@ -100,9 +100,10 @@ button{font:inherit;color:inherit}
 /* sheet */
 #sheet-root .backdrop{position:fixed;inset:0;background:rgba(8,14,26,.45);opacity:0;transition:opacity .25s;z-index:10}
 #sheet-root.open .backdrop{opacity:1}
-#sheet-root .sheet{position:fixed;left:50%;bottom:0;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;background:var(--surface);border-radius:24px 24px 0 0;padding:10px 18px calc(20px + env(safe-area-inset-bottom));transform:translate(-50%,100%);transition:transform .28s cubic-bezier(.2,.9,.3,1);z-index:11}
+#sheet-root .sheet{position:fixed;left:50%;bottom:0;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;overscroll-behavior:contain;background:var(--surface);border-radius:24px 24px 0 0;padding:10px 18px calc(20px + env(safe-area-inset-bottom));transform:translate(-50%,100%);transition:transform .28s cubic-bezier(.2,.9,.3,1);z-index:11}
 #sheet-root.open .sheet{transform:translate(-50%,0)}
-.grab{width:40px;height:5px;border-radius:3px;background:var(--line-strong);margin:0 auto 14px}
+.grab{width:40px;height:5px;border-radius:3px;background:var(--line-strong);margin:0 auto 14px;position:relative}
+.grab::before{content:'';position:absolute;inset:-14px -40px}
 .sheet h2{margin:0 0 14px;font-size:22px;letter-spacing:-.02em}
 .field{margin-bottom:14px}
 .field>label,.field>.lbl{display:block;font-size:14px;color:var(--muted);margin-bottom:6px}
@@ -533,8 +534,52 @@ function openSheet(html) {
   r.innerHTML = `<div class="backdrop"></div><div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div>${html}</div>`;
   document.body.classList.add('noscroll');
   requestAnimationFrame(() => requestAnimationFrame(() => r.classList.add('open')));
-  r.querySelector('.backdrop').onclick = closeSheet;
-  return r.querySelector('.sheet');
+  const sheet = r.querySelector('.sheet'), backdrop = r.querySelector('.backdrop');
+  backdrop.onclick = closeSheet;
+  backdrop.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+  enableSwipe(sheet, backdrop);
+  return sheet;
+}
+// Swipe down on a sheet to dismiss it. The sheet follows the finger; a long pull or a quick flick closes it,
+// otherwise it springs back. If the sheet's contents are scrolled, a downward swipe scrolls them instead.
+function enableSwipe(sheet, backdrop) {
+  let startY = 0, lastY = 0, startT = 0, dragging = false, tracking = false;
+  sheet.addEventListener('touchstart', e => {
+    tracking = e.touches.length === 1; dragging = false;
+    startY = lastY = e.touches[0].clientY; startT = Date.now();
+  }, { passive: true });
+  sheet.addEventListener('touchmove', e => {
+    if (!tracking) return;
+    const y = e.touches[0].clientY;
+    if (!dragging && sheet.scrollTop > 0) { startY = y; startT = Date.now(); return; }   // normal scrolling
+    const dy = y - startY;
+    if (!dragging) {
+      if (dy <= 8) return;
+      dragging = true;
+      sheet.style.transition = 'none'; backdrop.style.transition = 'none';
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    }
+    e.preventDefault();
+    lastY = y;
+    const d = Math.max(0, dy);
+    sheet.style.transform = `translate(-50%, ${d}px)`;
+    backdrop.style.opacity = String(Math.max(0, 1 - d / 500));
+  }, { passive: false });
+  const end = () => {
+    const was = dragging; tracking = false; dragging = false;
+    if (!was) return;
+    const dy = Math.max(0, lastY - startY), v = dy / Math.max(1, Date.now() - startT);
+    sheet.style.transition = 'transform .22s ease-out'; backdrop.style.transition = 'opacity .22s';
+    if (dy > 110 || (dy > 30 && v > 0.7)) {
+      sheet.style.transform = 'translate(-50%, 100%)'; backdrop.style.opacity = '0';
+      closeSheet();
+    } else {
+      sheet.style.transform = ''; backdrop.style.opacity = '';
+      setTimeout(() => { sheet.style.transition = ''; backdrop.style.transition = ''; }, 250);
+    }
+  };
+  sheet.addEventListener('touchend', end);
+  sheet.addEventListener('touchcancel', end);
 }
 function closeSheet() {
   const r = $('#sheet-root'); r.classList.remove('open');
@@ -730,6 +775,7 @@ function openSettings() {
 }
 
 /* ---------- boot ---------- */
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#sheet-root').classList.contains('open')) closeSheet(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden && cfg) sync(); });
 window.addEventListener('online', () => { if (cfg) sync(); });
 setInterval(() => { if (!document.hidden && cfg && currentView() === 'main' && !$('#sheet-root').classList.contains('open')) sync(); }, 30000);
