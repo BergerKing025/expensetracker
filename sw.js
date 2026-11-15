@@ -1,5 +1,5 @@
 // Network-first service worker so the app opens offline and always picks up new versions when online.
-const CACHE = 'expenses-tracker-v3';
+const CACHE = 'expenses-tracker-v4';
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-180.png'])));
   self.skipWaiting();

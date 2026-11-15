@@ -22,6 +22,7 @@
   --bg:#EDF0F5; --surface:#FFFFFF; --ink:#18212F; --muted:#66718A;
   --line:#DCE1EB; --line-strong:#C3CBDA;
   --a:#1B8486; --b:#B03F79; --ok:#2F7D4F; --danger:#C0392B;
+  --a-ink:var(--bg); --b-ink:var(--bg);
 }
 @media (prefers-color-scheme: dark){
   :root{
@@ -60,8 +61,8 @@ button{font:inherit;color:inherit}
 .seesaw{position:relative;height:80px;margin:10px 8px 22px}
 .beam{position:absolute;left:0;right:0;top:24px;height:5px;border-radius:3px;background:var(--ink);transform:rotate(var(--tilt,0deg));transition:transform .9s cubic-bezier(.3,1.5,.5,1)}
 .pan{position:absolute;top:-17px;width:39px;height:39px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:16px;color:var(--bg)}
-.pan.a{left:-8px;background:var(--a)}
-.pan.b{right:-8px;background:var(--b)}
+.pan.a{left:-8px;background:var(--a);color:var(--a-ink)}
+.pan.b{right:-8px;background:var(--b);color:var(--b-ink)}
 .pivot{position:absolute;left:50%;top:30px;transform:translateX(-50%);border-left:15px solid transparent;border-right:15px solid transparent;border-bottom:28px solid var(--line-strong)}
 .owes{margin:0;font-size:20px;font-weight:600;letter-spacing:-.01em}
 .owes .na{color:var(--a)} .owes .nb{color:var(--b)}
@@ -117,6 +118,12 @@ input:focus-visible,button:focus-visible{outline:2px solid var(--a);outline-offs
 .seg button{flex:1 1 0;min-width:0;padding:12px 4px;border-radius:12px;border:1.5px solid var(--line-strong);background:transparent;font-weight:600;cursor:pointer;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .share-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
 .seg.unit button{flex:none;padding:12px 18px}
+.swatches{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.swatch{width:36px;height:36px;border-radius:50%;border:0;padding:0;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+.swatch[aria-pressed="true"],.swatch.custom.on{outline:3px solid var(--ink);outline-offset:2px}
+.swatch.auto{width:auto;padding:0 14px;background:transparent;box-shadow:none;border:1.5px solid var(--line-strong);border-radius:999px;font-size:14px;font-weight:600}
+.swatch.custom{position:relative;overflow:hidden;background:conic-gradient(#e44,#ec4,#4c6,#4cc,#46e,#c4c,#e44)}
+.swatch.custom input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0}
 .seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .preview{background:var(--bg);border-radius:12px;padding:12px 14px;font-size:15px;color:var(--muted);margin:2px 0 16px;min-height:46px}
 .preview b{color:var(--ink)}
@@ -179,6 +186,8 @@ function customOwed(f, total) {
 /* ---------- state ---------- */
 let cfg = load('evenly.cfg', null);                       // { repo, path, branch, token, me }
 let data = load('evenly.data', { people: [], peopleAt: 0, items: [] });
+data.colors = data.colors || [null, null];       // optional custom circle colors, one per person
+data.colorsAt = data.colorsAt || [0, 0];
 const persist = () => localStorage.setItem('evenly.data', JSON.stringify(data));
 const saveCfg = () => localStorage.setItem('evenly.cfg', JSON.stringify(cfg));
 let status = { state: 'idle', msg: '', at: 0 };
@@ -186,6 +195,20 @@ let lastView = null;
 
 const name = i => data.people[i] || '?';
 const color = i => i === 0 ? 'var(--a)' : 'var(--b)';
+const avatarStyle = i => `background:${color(i)};color:var(${i === 0 ? '--a-ink' : '--b-ink'})`;
+const PALETTE = ['#14A3A3', '#3BA55D', '#E0A100', '#E8743B', '#DC4A4A', '#D9558F', '#8E5FD1', '#5B6EE1', '#2F8BE6', '#7A8699'];
+function inkFor(hex) {
+  const n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.62 ? '#18212F' : '#FFFFFF';
+}
+function applyColors() {
+  const st = document.documentElement.style;
+  [0, 1].forEach(i => {
+    const k = i === 0 ? '--a' : '--b', c = data.colors[i];
+    if (c) { st.setProperty(k, c); st.setProperty(k + '-ink', inkFor(c)); }
+    else { st.removeProperty(k); st.removeProperty(k + '-ink'); }
+  });
+}
 const initial = i => (name(i)[0] || '?').toUpperCase();
 const active = () => data.items.filter(i => !i.deleted);
 
@@ -241,10 +264,15 @@ async function apiError(res) {
 }
 
 const sortItems = a => [...a].sort((x, y) => x.createdAt - y.createdAt || (x.id < y.id ? -1 : 1));
-const serialize = d => JSON.stringify({ schema: 1, people: d.people, peopleAt: d.peopleAt || 0, items: sortItems(d.items) }, null, 1);
+const serialize = d => JSON.stringify({ schema: 1, people: d.people, peopleAt: d.peopleAt || 0, colors: d.colors || [null, null], colorsAt: d.colorsAt || [0, 0], items: sortItems(d.items) }, null, 1);
 
 function merge(local, remote) {
-  const out = { people: local.people, peopleAt: local.peopleAt || 0, items: [] };
+  const out = { people: local.people, peopleAt: local.peopleAt || 0, colors: [null, null], colorsAt: [0, 0], items: [] };
+  for (const i of [0, 1]) {   // each person's color is merged on its own, newest change wins
+    const lt = (local.colorsAt || [])[i] || 0, rt = (remote?.colorsAt || [])[i] || 0;
+    if (rt > lt) { out.colors[i] = (remote.colors || [])[i] ?? null; out.colorsAt[i] = rt; }
+    else { out.colors[i] = (local.colors || [])[i] ?? null; out.colorsAt[i] = lt; }
+  }
   if (remote && remote.people && remote.people.length === 2 && (remote.peopleAt || 0) >= (local.peopleAt || 0)) {
     out.people = remote.people; out.peopleAt = remote.peopleAt || 0;
   }
@@ -277,7 +305,7 @@ async function sync() {
       if (data.people.length !== 2) { done = true; break; }   // waiting for names
 
       const out = serialize(data);
-      if (remote && serialize({ people: remote.people, peopleAt: remote.peopleAt, items: remote.items || [] }) === out) { done = true; break; }
+      if (remote && serialize({ people: remote.people, peopleAt: remote.peopleAt, colors: remote.colors, colorsAt: remote.colorsAt, items: remote.items || [] }) === out) { done = true; break; }
 
       const put = await ghFetch('PUT', {
         message: `Expenses Tracker update from ${name(cfg.me ?? 0)}`,
@@ -314,6 +342,7 @@ function currentView() {
   return 'main';
 }
 function render() {
+  applyColors();
   const v = currentView();
   if (v !== lastView) { lastView = v; $('#app').innerHTML = views[v](); bind[v]?.(); }
   if (v === 'main') renderMain();
@@ -363,8 +392,8 @@ const views = {
     <h1>Which one are you?</h1>
     <p class="lead">Connected. Pick your name so new purchases default to you.</p>
     <div class="who-btns">
-      <button class="btn" data-me="0"><span class="avatar" style="background:var(--a)">${esc(initial(0))}</span>I'm ${esc(name(0))}</button>
-      <button class="btn" data-me="1"><span class="avatar" style="background:var(--b)">${esc(initial(1))}</span>I'm ${esc(name(1))}</button>
+      <button class="btn" data-me="0"><span class="avatar" style="${avatarStyle(0)}">${esc(initial(0))}</span>I'm ${esc(name(0))}</button>
+      <button class="btn" data-me="1"><span class="avatar" style="${avatarStyle(1)}">${esc(initial(1))}</span>I'm ${esc(name(1))}</button>
     </div>
   </div>`,
 
@@ -451,9 +480,10 @@ function renderMain() {
   const amt = Math.abs(net);
 
   $('#pan-a').textContent = initial(0); $('#pan-b').textContent = initial(1);
+  // Level when nothing is owed; otherwise a gentle tilt (about 1.7° for $1, 5° for $50, 8° max) toward whoever owes.
   let tilt = 0;
-  if (net !== 0) tilt = (debtor === 1 ? 1 : -1) * Math.min(9, 1.5 + Math.sqrt(amt / 100) * 0.8);
-  setTimeout(() => $('#beam') && $('#beam').style.setProperty('--tilt', tilt + 'deg'), 60);
+  if (net !== 0) tilt = (debtor === 1 ? 1 : -1) * Math.min(8, 1 + 2.2 * Math.log10(1 + amt / 100));
+  setTimeout(() => $('#beam') && $('#beam').style.setProperty('--tilt', (net === 0 ? 0 : tilt.toFixed(2)) + 'deg'), 60);
 
   const nm = i => `<span class="${i === 0 ? 'na' : 'nb'}">${esc(name(i))}</span>`;
   $('#owes').innerHTML = net === 0 ? 'All square'
@@ -487,7 +517,7 @@ function renderMain() {
       const how = it.resp === 'split' ? 'split 50/50' : it.resp === 'custom' ? 'custom split' : it.resp === it.paidBy ? 'own purchase' : `${name(it.resp)} responsible`;
       const effTxt = e.amt ? `<div class="eff" style="color:${color(e.to)}">${esc(name(e.from))} owes ${fmt(e.amt)}</div>` : `<div class="eff meta">no one owes</div>`;
       html += `<button class="row ${it.createdAt <= last ? 'settled' : ''}" data-id="${it.id}">
-        <span class="avatar" style="background:${color(it.paidBy)}">${esc(initial(it.paidBy))}</span>
+        <span class="avatar" style="${avatarStyle(it.paidBy)}">${esc(initial(it.paidBy))}</span>
         <div style="min-width:0"><div class="desc">${esc(it.desc)}</div><div class="meta">${esc(name(it.paidBy))} paid · ${how} · ${shortDate(it.date)}</div></div>
         <div class="amt"><div class="total">${fmt(it.amount)}</div>${effTxt}</div></button>`;
     }
@@ -647,10 +677,30 @@ function openSettlement(id) {
   armConfirm($('#u-go'), 'Tap again to undo', () => { it.deleted = true; it.updatedAt = Date.now(); persist(); closeSheet(); render(); sync(); });
 }
 
+function swatchesHTML(i) {
+  const cur = (data.colors[i] || '').toLowerCase();
+  const custom = cur && !PALETTE.some(c => c.toLowerCase() === cur);
+  return `<div class="swatches" data-i="${i}">
+    <button type="button" class="swatch auto" data-c="" aria-pressed="${!cur}">Auto</button>
+    ${PALETTE.map(c => `<button type="button" class="swatch" data-c="${c}" aria-label="${c}" style="background:${c}" aria-pressed="${cur === c.toLowerCase()}"></button>`).join('')}
+    <label class="swatch custom ${custom ? 'on' : ''}" aria-label="Pick any color"><input type="color" value="${data.colors[i] || PALETTE[i === 0 ? 0 : 5]}"></label>
+  </div>`;
+}
+let colorSyncTimer;
+function setColor(i, c, box) {
+  data.colors[i] = c; data.colorsAt[i] = Date.now(); persist(); applyColors(); render();
+  const cur = (c || '').toLowerCase();
+  box.querySelectorAll('button[data-c]').forEach(b => b.setAttribute('aria-pressed', (b.dataset.c || '').toLowerCase() === cur));
+  box.querySelector('.custom').classList.toggle('on', !!cur && !PALETTE.some(p => p.toLowerCase() === cur));
+  clearTimeout(colorSyncTimer); colorSyncTimer = setTimeout(sync, 700);
+}
+
 function openSettings() {
   openSheet(`
     <h2>Settings</h2>
     <div class="field"><div class="lbl">I am</div>${segHTML('st-me', [[0, name(0)], [1, name(1)]], cfg.me)}</div>
+    <div class="field"><div class="lbl">${esc(name(0))}'s circle color</div>${swatchesHTML(0)}</div>
+    <div class="field"><div class="lbl">${esc(name(1))}'s circle color</div>${swatchesHTML(1)}</div>
     <div class="field"><label for="st-a">First name</label><input id="st-a" type="text" value="${esc(name(0))}"></div>
     <div class="field"><label for="st-b">Second name</label><input id="st-b" type="text" value="${esc(name(1))}"></div>
     <p class="note">Syncing with <b>${esc(cfg.repo)}</b>, file ${esc(cfg.path)}.</p>
@@ -661,6 +711,11 @@ function openSettings() {
       <button class="btn danger" id="st-out">Disconnect this phone</button>
     </div>`);
   bindSeg('st-me', v => { cfg.me = Number(v); saveCfg(); render(); });
+  document.querySelectorAll('.swatches').forEach(box => {
+    const i = Number(box.dataset.i), pick = box.querySelector('input[type=color]');
+    box.onclick = e => { const b = e.target.closest('button[data-c]'); if (b) setColor(i, b.dataset.c || null, box); };
+    pick.oninput = () => setColor(i, pick.value.toUpperCase(), box);
+  });
   $('#st-save').onclick = () => {
     const a = $('#st-a').value.trim(), b = $('#st-b').value.trim();
     if (!a || !b || a.toLowerCase() === b.toLowerCase()) { $('#st-err').textContent = 'Enter two different names.'; return; }
@@ -669,7 +724,7 @@ function openSettings() {
   $('#st-sync').onclick = () => { closeSheet(); sync(); };
   armConfirm($('#st-out'), 'Tap again to disconnect', () => {
     localStorage.removeItem('evenly.cfg'); localStorage.removeItem('evenly.data');
-    cfg = null; data = { people: [], peopleAt: 0, items: [] }; closeSheet(); lastView = null; render();
+    cfg = null; data = { people: [], peopleAt: 0, colors: [null, null], colorsAt: [0, 0], items: [] }; closeSheet(); lastView = null; render();
     toast('Disconnected. Your data is still in the GitHub repository.');
   });
 }

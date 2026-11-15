@@ -44,6 +44,7 @@ A two-person shared expense tracker that runs as a web app on GitHub Pages and i
 - The top of the screen shows the running balance between you.
 - **Settle up** records one payment that zeroes the balance. Settled purchases are dimmed. Tap a settlement to undo it.
 - Tap any purchase to edit or delete it.
+- Under the gear icon you can pick each person's circle color (a preset, any custom color, or Auto). Colors sync to both phones.
 
 ## Security notes
 
