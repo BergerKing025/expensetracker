@@ -44,7 +44,9 @@ A two-person shared expense tracker that runs as a web app on GitHub Pages and i
 - The top of the screen shows the running balance between you.
 - **Settle up** records one payment that zeroes the balance. Settled purchases are dimmed. Tap a settlement to undo it.
 - Tap any purchase to edit or delete it.
-- **Export**: gear icon > Export expenses (CSV). On iPhone this opens the share sheet (Save to Files, AirDrop, Mail). The file opens in Excel, Numbers, or Google Sheets and includes every purchase and settlement with a Settled/Unsettled status.
+- **Categories**: pick a category on each purchase (Bills, Groceries, Eating Out, Entertainment, Transport, Shopping, Travel and Home come preinstalled) or create a new one right from the form.
+- **Categories tab**: a stacked bar chart of spending by month (3, 6 or 12 months) and a breakdown by category. View everyone's total or just one person's share, tap a month to focus on it, and tap a category to see its monthly totals and purchases. "Manage categories" lets you rename, recolor, add and remove them.
+- **Export**: gear icon > Export expenses (CSV). On iPhone this opens the share sheet (Save to Files, AirDrop, Mail). The file opens in Excel, Numbers, or Google Sheets and includes every purchase and settlement with a category and a Settled/Unsettled status.
 - Under the gear icon you can pick each person's circle color (a preset, any custom color, or Auto). Colors sync to both phones.
 
 ## Security notes
