@@ -611,11 +611,10 @@ function renderMain() {
         <div class="amt"><div class="total">${fmt(it.amount)}</div></div></button>`;
     } else {
       const e = effect(it);
-      const how = it.resp === 'split' ? 'split 50/50' : it.resp === 'custom' ? 'custom split' : it.resp === it.paidBy ? 'own purchase' : `${name(it.resp)} responsible`;
       const effTxt = e.amt ? `<div class="eff" style="color:${color(e.to)}">${esc(name(e.from))} owes ${fmt(e.amt)}</div>` : `<div class="eff meta">no one owes</div>`;
       html += `<button class="row ${it.createdAt <= last ? 'settled' : ''}" data-id="${it.id}">
         <span class="avatar" style="${avatarStyle(it.paidBy)}">${esc(initial(it.paidBy))}</span>
-        <div style="min-width:0"><div class="desc">${esc(it.desc)}</div><div class="meta">${catTag(it)}${esc(name(it.paidBy))} paid · ${how} · ${shortDate(it.date)}</div></div>
+        <div style="min-width:0"><div class="desc">${esc(it.desc)}</div><div class="meta">${catTag(it)}${shortDate(it.date)}</div></div>
         <div class="amt"><div class="total">${fmt(it.amount)}</div>${effTxt}</div></button>`;
     }
   }
@@ -959,7 +958,7 @@ function openCatDetail(cid) {
     ${catMonth ? '' : `<div>${per.map(([k, v]) => `<div class="mrow"><span>${shortMonth(k)}</span><div class="cbar"><i style="width:${(v / maxv * 100).toFixed(1)}%;background:${esc(m.color)}"></i></div><b>${fmt(v)}</b></div>`).join('')}</div>`}
     <div class="group" id="cd-list" style="margin-top:12px">${list.map(it => `<button type="button" class="row" data-id="${it.id}">
       <span class="avatar" style="${avatarStyle(it.paidBy)}">${esc(initial(it.paidBy))}</span>
-      <div style="min-width:0"><div class="desc">${esc(it.desc)}</div><div class="meta">${esc(name(it.paidBy))} paid · ${shortDate(it.date)}</div></div>
+      <div style="min-width:0"><div class="desc">${esc(it.desc)}</div><div class="meta">${shortDate(it.date)}</div></div>
       <div class="amt"><div class="total">${fmt(basisAmt(it))}</div></div></button>`).join('') || '<div class="empty">No purchases in this period.</div>'}</div>
     </div>`);
   $('#cd-list').onclick = e => { const r = e.target.closest('[data-id]'); if (r) openExpense(r.dataset.id); };
